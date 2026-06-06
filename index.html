@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SignSeal — Online Verification</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+     background:linear-gradient(135deg,#f8f9fb 0%,#edeef5 100%);color:#1a1a2e;
+     min-height:100vh}
+.top{background:linear-gradient(135deg,#800020 0%,#5c0017 100%);color:#fff;
+     padding:32px 0 0;text-align:center;position:relative}
+.top::after{content:"";display:block;height:6px;
+            background:linear-gradient(90deg,#FFD700,#B8960C)}
+.top h1{font-size:32px;font-weight:700;letter-spacing:-.5px}
+.top p{color:#fcc;font-size:14px;margin:6px 0 24px}
+.container{max-width:740px;margin:0 auto;padding:24px 16px 60px}
+.search{background:#fff;border-radius:14px;padding:28px 32px;
+        box-shadow:0 8px 32px rgba(0,0,0,.07);margin-top:-28px;position:relative;z-index:2}
+.search label{font-weight:600;font-size:14px;display:block;margin-bottom:8px}
+.search-row{display:flex;gap:10px}
+.search-row input{flex:1;border:2px solid #e0e0e8;border-radius:8px;padding:12px 16px;
+                   font-size:15px;font-family:inherit;outline:none;transition:border .2s}
+.search-row input:focus{border-color:#800020}
+.search-row button{background:#800020;color:#fff;border:none;border-radius:8px;
+                    padding:12px 28px;font-weight:700;font-size:14px;cursor:pointer;
+                    transition:background .2s;white-space:nowrap}
+.search-row button:hover{background:#5c0017}
+.search-or{text-align:center;color:#888;font-size:12px;margin:14px 0 10px}
+.upload-area{border:2px dashed #ccc;border-radius:10px;padding:20px;text-align:center;
+             cursor:pointer;transition:border .2s,background .2s}
+.upload-area:hover,.upload-area.drag{border-color:#800020;background:#fdf6f8}
+.upload-area p{color:#666;font-size:13px}
+.upload-area input{display:none}
+.result{margin-top:24px;display:none}
+.result.show{display:block}
+.card{background:#fff;border-radius:14px;overflow:hidden;
+      box-shadow:0 8px 32px rgba(0,0,0,.07)}
+.card-header{padding:20px 28px;color:#fff;display:flex;align-items:center;gap:14px}
+.card-header.ok{background:linear-gradient(135deg,#28a745,#1e7e34)}
+.card-header.fail{background:linear-gradient(135deg,#dc3545,#b02a37)}
+.card-header.loading{background:linear-gradient(135deg,#6c757d,#555)}
+.seal-sm{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.2);
+         display:flex;align-items:center;justify-content:center;font-size:28px;
+         flex-shrink:0;border:3px solid rgba(255,255,255,.4)}
+.card-header h2{font-size:18px;font-weight:700}
+.card-header p{font-size:12px;opacity:.85;margin-top:2px}
+.details{padding:24px 28px}
+.row{display:flex;padding:10px 0;border-bottom:1px solid #f4f4f8}
+.row:last-child{border-bottom:none}
+.row-label{flex:0 0 150px;color:#6c757d;font-size:12px;font-weight:500}
+.row-value{flex:1;font-size:14px;font-weight:500;word-break:break-all}
+.row-value.bold{font-weight:700}
+.row-value.mono{font-family:"SF Mono",Consolas,monospace;font-size:11px}
+.hash-check{background:#f8f9fb;border-top:1px solid #eee;padding:20px 28px}
+.hash-check h3{font-size:13px;font-weight:700;color:#800020;margin-bottom:10px}
+.hash-result{padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-top:10px;display:none}
+.hash-result.match{background:#d4edda;color:#155724;display:block}
+.hash-result.fail{background:#f8d7da;color:#721c24;display:block}
+.hash-result.pending{background:#fff3cd;color:#856404;display:block}
+.footer{text-align:center;color:#888;font-size:11px;margin-top:36px;line-height:1.7}
+.footer strong{color:#800020}
+.not-found{text-align:center;padding:30px;color:#6c757d}
+.not-found h3{color:#dc3545;margin-bottom:8px}
+.spinner{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.3);
+         border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;
+         vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){
+  .row{flex-direction:column}
+  .row-label{margin-bottom:3px}
+  .search{padding:20px 18px}
+  .search-row{flex-direction:column}
+  .details{padding:18px 20px}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>SignSeal</h1>
+  <p>Online Document Verification</p>
+</div>
+<div class="container">
+  <div class="search">
+    <label>Look up an Audit ID</label>
+    <div class="search-row">
+      <input type="text" id="auditInput" placeholder="SS-2026-XXXXXX-XX" autocomplete="off"/>
+      <button onclick="lookupById()">Verify</button>
+    </div>
+    <div class="search-or">or drop a signed PDF below to check its hash</div>
+    <div class="upload-area" id="dropZone" onclick="document.getElementById('pdfFile').click()">
+      <p>Drop PDF here or click to choose</p>
+      <input type="file" id="pdfFile" accept=".pdf"/>
+    </div>
+  </div>
+  <div class="result" id="resultBox"></div>
+  <div class="footer">
+    <strong>SignSeal</strong> &mdash; Free document verification<br/>
+    Recognised under the South African ECT Act, 2002
+  </div>
+</div>
+<script>
+const SB_URL = "https://ndierlngpweqzizezuoa.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kaWVybG5ncHdlcXppemV6dW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MzA5NzEsImV4cCI6MjA5NjMwNjk3MX0.gnJymVYAcrvxmKRAR_lsKOhNGep32AxnQzBPQWP4oYM";
+async function sbFetch(params) {
+  const qs = new URLSearchParams(params).toString();
+  const resp = await fetch(SB_URL + "/rest/v1/audit_records?" + qs, {
+    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+  });
+  if (!resp.ok) throw new Error("API error " + resp.status);
+  return resp.json();
+}
+async function lookupById() {
+  const id = document.getElementById("auditInput").value.trim();
+  if (!id) return;
+  showLoading("Looking up " + id + "...");
+  try {
+    const rows = await sbFetch({ audit_id: "eq." + id, limit: "1" });
+    if (rows.length === 0) { showNotFound(id); return; }
+    showRecord(rows[0]);
+  } catch (e) { showError(e.message); }
+}
+async function lookupByHash(hash) {
+  showLoading("Searching for hash...");
+  try {
+    const rows = await sbFetch({ document_hash: "eq." + hash, limit: "1" });
+    if (rows.length === 0) { showHashOnly(hash); return; }
+    showRecord(rows[0], hash);
+  } catch (e) { showError(e.message); }
+}
+function showRecord(rec, uploadedHash) {
+  const raw = rec.raw_record || {};
+  const sig = raw.signature || {};
+  const doc = raw.document || {};
+  const rBox = document.getElementById("resultBox");
+  let rows = `
+    <div class="row"><div class="row-label">Audit ID</div>
+      <div class="row-value bold mono">${esc(rec.audit_id)}</div></div>
+    <div class="row"><div class="row-label">Signed by</div>
+      <div class="row-value bold">${esc(rec.signer_name)}</div></div>`;
+  if (rec.signer_email) rows += `
+    <div class="row"><div class="row-label">Email</div>
+      <div class="row-value">${esc(rec.signer_email)}</div></div>`;
+  if (rec.signer_org) rows += `
+    <div class="row"><div class="row-label">Organization</div>
+      <div class="row-value">${esc(rec.signer_org)}</div></div>`;
+  rows += `
+    <div class="row"><div class="row-label">Date &amp; Time</div>
+      <div class="row-value bold">${esc(sig.timestamp_display || rec.signed_at || "")}</div></div>`;
+  if (rec.reason) rows += `
+    <div class="row"><div class="row-label">Reason</div>
+      <div class="row-value">${esc(rec.reason)}</div></div>`;
+  if (rec.location) rows += `
+    <div class="row"><div class="row-label">Location</div>
+      <div class="row-value">${esc(rec.location)}</div></div>`;
+  rows += `
+    <div class="row"><div class="row-label">Document</div>
+      <div class="row-value">${esc(rec.document_name)}</div></div>
+    <div class="row"><div class="row-label">SHA-256</div>
+      <div class="row-value mono">${esc(rec.document_hash)}</div></div>`;
+  let hashSection = "";
+  if (uploadedHash) {
+    const match = uploadedHash === rec.document_hash;
+    hashSection = `<div class="hash-check">
+      <div class="hash-result ${match ? "match" : "fail"}">${match
+        ? "&#10004; HASH MATCH &mdash; this is the authentic signed document."
+        : "&#9888; HASH MISMATCH &mdash; the file does NOT match the audit record."
+      }</div></div>`;
+  } else {
+    hashSection = `<div class="hash-check">
+      <h3>Verify a PDF against this record</h3>
+      <div class="upload-area" onclick="document.getElementById('hashFile').click()"
+           style="padding:14px">
+        <p style="margin:0">Drop PDF here to check hash</p>
+        <input type="file" id="hashFile" accept=".pdf"/>
+      </div>
+      <div class="hash-result" id="hashResult"></div>
+    </div>`;
+  }
+  rBox.innerHTML = `<div class="card">
+    <div class="card-header ok">
+      <div class="seal-sm">&#10003;</div>
+      <div><h2>VERIFIED &amp; SIGNED</h2>
+           <p>This document has a valid SignSeal audit record</p></div>
+    </div>
+    <div class="details">${rows}</div>
+    ${hashSection}
+  </div>`;
+  rBox.className = "result show";
+  const hf = document.getElementById("hashFile");
+  if (hf) {
+    hf.addEventListener("change", async e => {
+      const file = e.target.files[0]; if (!file) return;
+      const hr = document.getElementById("hashResult");
+      hr.className = "hash-result pending"; hr.style.display = "block";
+      hr.textContent = "Computing SHA-256...";
+      const buf = await file.arrayBuffer();
+      const hb = await crypto.subtle.digest("SHA-256", buf);
+      const hash = Array.from(new Uint8Array(hb)).map(b=>b.toString(16).padStart(2,"0")).join("");
+      const ok = hash === rec.document_hash;
+      hr.className = "hash-result " + (ok ? "match" : "fail");
+      hr.innerHTML = ok
+        ? "&#10004; MATCH &mdash; authentic document."
+        : "&#9888; MISMATCH &mdash; file has been modified or is a different document.";
+    });
+  }
+}
+function showNotFound(id) {
+  const rBox = document.getElementById("resultBox");
+  rBox.innerHTML = `<div class="card"><div class="card-header fail">
+    <div class="seal-sm">&#10007;</div>
+    <div><h2>NOT FOUND</h2><p>No record for ${esc(id)}</p></div>
+  </div><div class="not-found">
+    <p>This audit ID was not found in the cloud database.<br/>
+    It may be a local-only record, or the ID may be incorrect.</p>
+  </div></div>`;
+  rBox.className = "result show";
+}
+function showHashOnly(hash) {
+  const rBox = document.getElementById("resultBox");
+  rBox.innerHTML = `<div class="card"><div class="card-header fail">
+    <div class="seal-sm">?</div>
+    <div><h2>NO MATCHING RECORD</h2><p>Hash not found in cloud</p></div>
+  </div><div class="not-found">
+    <p>No audit record matches this document's hash.<br/>
+    The document may not have been signed with SignSeal, or the record hasn't been synced yet.</p>
+    <p style="margin-top:10px;font-family:monospace;font-size:10px;color:#999">${esc(hash)}</p>
+  </div></div>`;
+  rBox.className = "result show";
+}
+function showLoading(msg) {
+  const rBox = document.getElementById("resultBox");
+  rBox.innerHTML = `<div class="card"><div class="card-header loading">
+    <div class="spinner"></div><div><h2>${esc(msg)}</h2></div>
+  </div></div>`;
+  rBox.className = "result show";
+}
+function showError(msg) {
+  const rBox = document.getElementById("resultBox");
+  rBox.innerHTML = `<div class="card"><div class="card-header fail">
+    <div class="seal-sm">!</div>
+    <div><h2>Connection Error</h2><p>${esc(msg)}</p></div>
+  </div></div>`;
+  rBox.className = "result show";
+}
+function esc(s) { const d=document.createElement("div"); d.textContent=s||""; return d.innerHTML; }
+document.getElementById("pdfFile").addEventListener("change", async e => {
+  const file = e.target.files[0]; if (!file) return;
+  showLoading("Hashing " + file.name + "...");
+  const buf = await file.arrayBuffer();
+  const hb = await crypto.subtle.digest("SHA-256", buf);
+  const hash = Array.from(new Uint8Array(hb)).map(b=>b.toString(16).padStart(2,"0")).join("");
+  await lookupByHash(hash);
+});
+const dz = document.getElementById("dropZone");
+dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag"); });
+dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+dz.addEventListener("drop", e => {
+  e.preventDefault(); dz.classList.remove("drag");
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById("pdfFile").files = e.dataTransfer.files;
+              document.getElementById("pdfFile").dispatchEvent(new Event("change")); }
+});
+document.getElementById("auditInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") lookupById();
+});
+(function() {
+  const p = new URLSearchParams(location.search);
+  const id = p.get("id");
+  if (id) { document.getElementById("auditInput").value = id; lookupById(); }
+})();
+</script>
+</body>
+</html>
