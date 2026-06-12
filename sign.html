@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex">
+<title>Sign Document — SignSeal</title>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<style>
+  :root { --maroon:#800020; --maroon-dark:#5c0017; --gold:#FFD700; --ink:#1a1a2e;
+          --gray:#6b7280; --bg:#f3f4f8; --ok:#28a745; --danger:#c0392b; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--maroon); color:#fff; padding:14px 20px; display:flex; align-items:center; gap:10px;
+           border-bottom:4px solid var(--gold); position:sticky; top:0; z-index:10; }
+  header .logo { font-size:20px; font-weight:700; letter-spacing:.3px; }
+  header .sub { font-size:11px; opacity:.85; }
+  .wrap { max-width:880px; margin:0 auto; padding:16px; }
+  .card { background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:18px 20px; margin-bottom:14px; }
+  .request-title { font-size:17px; font-weight:700; }
+  .request-meta { color:var(--gray); font-size:13px; margin-top:4px; }
+  .msg { background:#fdf7e7; border-left:3px solid var(--gold); padding:10px 12px; border-radius:6px;
+         font-size:13px; margin-top:10px; white-space:pre-wrap; }
+  #pages { display:flex; flex-direction:column; gap:10px; align-items:center; }
+  #pages canvas { width:100%; height:auto; border:1px solid #e2e4ee; border-radius:6px;
+                  box-shadow:0 1px 3px rgba(0,0,0,.06); background:#fff; }
+  .doc-label { font-size:12px; color:var(--gray); margin-bottom:8px; }
+  /* Sign panel */
+  .tabs { display:flex; gap:6px; margin-bottom:10px; }
+  .tab { flex:1; padding:9px; text-align:center; border-radius:8px; border:1.5px solid #d8dae6;
+         font-size:13px; font-weight:600; cursor:pointer; background:#fff; color:var(--gray); }
+  .tab.active { border-color:var(--maroon); color:var(--maroon); background:#fdf2f5; }
+  .padbox { position:relative; border:1.5px dashed #c3c6d4; border-radius:10px; background:#fff; }
+  #pad { width:100%; height:170px; touch-action:none; display:block; border-radius:10px; }
+  .pad-hint { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+              color:#c3c6d4; font-size:14px; pointer-events:none; }
+  .pad-line { position:absolute; left:8%; right:8%; bottom:38px; border-bottom:1.5px dashed #e4e6ef; pointer-events:none; }
+  .pad-actions { text-align:right; margin-top:6px; }
+  .linklike { background:none; border:none; color:var(--maroon); font-size:12px; cursor:pointer; text-decoration:underline; }
+  #typeBox { display:none; }
+  #typedInput { width:100%; padding:12px; font-size:15px; border:1.5px solid #d8dae6; border-radius:8px; }
+  #typedPreview { font-family:'Dancing Script','Segoe Script',cursive; font-size:44px; text-align:center;
+                  padding:14px 6px 6px; min-height:74px; color:#111; }
+  .field { margin-top:12px; }
+  .field label { font-size:12px; font-weight:600; color:var(--gray); display:block; margin-bottom:4px; }
+  .field input[type=text] { width:100%; padding:10px 12px; font-size:14px; border:1.5px solid #d8dae6; border-radius:8px; }
+  .consent { display:flex; gap:10px; align-items:flex-start; margin-top:14px; font-size:12.5px; color:#374151;
+             background:#f8f9fc; padding:10px 12px; border-radius:8px; }
+  .consent input { margin-top:2px; width:17px; height:17px; accent-color:var(--maroon); }
+  .btnrow { display:flex; gap:10px; margin-top:16px; }
+  .btn { flex:1; padding:14px; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; }
+  .btn-sign { background:var(--maroon); color:#fff; }
+  .btn-sign:disabled { background:#caa6b1; cursor:not-allowed; }
+  .btn-sign:not(:disabled):hover { background:var(--maroon-dark); }
+  .btn-decline { flex:0 0 110px; background:#fff; color:var(--gray); border:1.5px solid #d8dae6; }
+  .statebox { text-align:center; padding:56px 24px; }
+  .statebox .big { font-size:54px; }
+  .statebox h2 { margin:12px 0 6px; }
+  .statebox p { color:var(--gray); font-size:14px; max-width:430px; margin:0 auto; line-height:1.5; }
+  .seal { width:86px; height:86px; border-radius:50%; background:var(--ok); margin:0 auto 6px;
+          display:flex; align-items:center; justify-content:center; }
+  .seal svg { width:46px; height:46px; }
+  footer { text-align:center; color:#9aa0b0; font-size:11px; padding:18px 12px 30px; line-height:1.6; }
+  footer a { color:var(--maroon); }
+  .spinner { width:34px; height:34px; border:4px solid #e7e9f2; border-top-color:var(--maroon);
+             border-radius:50%; margin:0 auto 14px; animation:sp 0.9s linear infinite; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .fingerprint { font-family:Consolas,monospace; font-size:10.5px; color:#9aa0b0; word-break:break-all; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">SignSeal</div>
+    <div class="sub">Secure document signing</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="stateLoading" class="card statebox">
+    <div class="spinner"></div>
+    <p>Loading your document…</p>
+  </div>
+
+  <div id="stateError" class="card statebox" style="display:none">
+    <div class="big">🔍</div><h2>Link not found</h2>
+    <p>This signing link is invalid or has been removed. Please contact the sender for a new link.</p>
+  </div>
+
+  <div id="stateExpired" class="card statebox" style="display:none">
+    <div class="big">⏳</div><h2>Link expired</h2>
+    <p id="expiredText">This signing request has expired. Please ask the sender to send a fresh link.</p>
+  </div>
+
+  <div id="stateDone" class="card statebox" style="display:none">
+    <div class="seal"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h2>Document signed</h2>
+    <p id="doneText">Thank you! The sender has been notified and will send you the completed, certified document.</p>
+  </div>
+
+  <div id="stateDeclined" class="card statebox" style="display:none">
+    <div class="big">🚫</div><h2>Declined</h2>
+    <p>You have declined to sign this document. The sender will be informed.</p>
+  </div>
+
+  <div id="main" style="display:none">
+    <div class="card">
+      <div class="request-title" id="reqTitle"></div>
+      <div class="request-meta" id="reqMeta"></div>
+      <div class="msg" id="reqMsg" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <div class="doc-label" id="docLabel">Review the document below, then sign at the bottom.</div>
+      <div id="pages"></div>
+    </div>
+
+    <div class="card" id="signCard">
+      <div class="request-title" style="margin-bottom:10px">✍ Your signature</div>
+      <div class="tabs">
+        <div class="tab active" id="tabDraw">Draw</div>
+        <div class="tab" id="tabType">Type</div>
+      </div>
+
+      <div id="drawBox">
+        <div class="padbox">
+          <canvas id="pad"></canvas>
+          <div class="pad-line"></div>
+          <div class="pad-hint" id="padHint">Sign here with your finger or mouse</div>
+        </div>
+        <div class="pad-actions"><button class="linklike" id="clearPad">Clear</button></div>
+      </div>
+
+      <div id="typeBox">
+        <input type="text" id="typedInput" placeholder="Type your full name" autocomplete="name">
+        <div id="typedPreview"></div>
+      </div>
+
+      <div class="field">
+        <label for="nameInput">Confirm your full name</label>
+        <input type="text" id="nameInput" placeholder="e.g. Jan van der Merwe" autocomplete="name">
+      </div>
+
+      <label class="consent">
+        <input type="checkbox" id="consent">
+        <span>I agree to sign this document electronically and that my electronic signature is the
+        legal equivalent of my handwritten signature, as contemplated in Section 13 of the
+        South African Electronic Communications and Transactions Act, 2002.</span>
+      </label>
+
+      <div class="btnrow">
+        <button class="btn btn-decline" id="btnDecline">Decline</button>
+        <button class="btn btn-sign" id="btnSign" disabled>Sign Document</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Secured by <strong>SignSeal</strong> — the completed document receives a cryptographic seal and audit certificate.<br>
+  Document fingerprint: <span class="fingerprint" id="fp"></span>
+</footer>
+
+<script>
+const SUPABASE_URL = "https://ndierlngpweqzizezuoa.supabase.co";
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kaWVybG5ncHdlcXppemV6dW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MzA5NzEsImV4cCI6MjA5NjMwNjk3MX0.gnJymVYAcrvxmKRAR_lsKOhNGep32AxnQzBPQWP4oYM";
+
+const qs = new URLSearchParams(location.search);
+const REQ_ID = qs.get("id") || "";
+
+async function rpc(fn, args) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: { "apikey": ANON_KEY, "Authorization": "Bearer " + ANON_KEY,
+               "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+  if (!r.ok) throw new Error("rpc " + fn + " " + r.status);
+  return r.json();
+}
+
+function show(id) {
+  for (const s of ["stateLoading","stateError","stateExpired","stateDone","stateDeclined","main"])
+    document.getElementById(s).style.display = (s === id) ? "" : "none";
+}
+
+// ── Signature pad ───────────────────────────────────────────
+const pad = document.getElementById("pad");
+const ctx = pad.getContext("2d");
+let drawing = false, hasInk = false, last = null;
+
+function sizePad() {
+  const prev = hasInk ? pad.toDataURL() : null;
+  const w = pad.clientWidth, h = pad.clientHeight;
+  pad.width = w * 2; pad.height = h * 2;          // 2x for crispness
+  ctx.scale(2, 2); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = "#101030"; ctx.lineWidth = 2.4;
+  if (prev) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, w, h); img.src = prev; }
+}
+function pos(e) {
+  const r = pad.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+pad.addEventListener("pointerdown", e => { e.preventDefault(); pad.setPointerCapture(e.pointerId);
+  drawing = true; last = pos(e); });
+pad.addEventListener("pointermove", e => {
+  if (!drawing) return;
+  const p = pos(e);
+  ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+  last = p; hasInk = true;
+  document.getElementById("padHint").style.display = "none";
+  updateSignEnabled();
+});
+pad.addEventListener("pointerup", () => { drawing = false; });
+document.getElementById("clearPad").onclick = () => {
+  ctx.clearRect(0, 0, pad.width, pad.height); hasInk = false;
+  document.getElementById("padHint").style.display = "";
+  updateSignEnabled();
+};
+
+// ── Tabs ────────────────────────────────────────────────────
+let mode = "draw";
+const tabDraw = document.getElementById("tabDraw"), tabType = document.getElementById("tabType");
+tabDraw.onclick = () => { mode = "draw";
+  tabDraw.classList.add("active"); tabType.classList.remove("active");
+  document.getElementById("drawBox").style.display = ""; document.getElementById("typeBox").style.display = "none";
+  updateSignEnabled(); };
+tabType.onclick = () => { mode = "type";
+  tabType.classList.add("active"); tabDraw.classList.remove("active");
+  document.getElementById("drawBox").style.display = "none"; document.getElementById("typeBox").style.display = "";
+  updateSignEnabled(); };
+
+const typedInput = document.getElementById("typedInput");
+typedInput.addEventListener("input", () => {
+  document.getElementById("typedPreview").textContent = typedInput.value;
+  const n = document.getElementById("nameInput");
+  if (!n.value) n.value = typedInput.value;
+  updateSignEnabled();
+});
+document.getElementById("nameInput").addEventListener("input", updateSignEnabled);
+document.getElementById("consent").addEventListener("change", updateSignEnabled);
+
+function sigReady() { return mode === "draw" ? hasInk : typedInput.value.trim().length > 1; }
+function updateSignEnabled() {
+  const ok = sigReady() && document.getElementById("nameInput").value.trim().length > 1
+             && document.getElementById("consent").checked;
+  document.getElementById("btnSign").disabled = !ok;
+}
+
+// ── Export signature as trimmed transparent PNG ─────────────
+function exportSignature() {
+  let src;
+  if (mode === "draw") { src = pad; }
+  else {
+    src = document.createElement("canvas");
+    src.width = 800; src.height = 220;
+    const c = src.getContext("2d");
+    c.font = "600 96px 'Dancing Script', 'Segoe Script', cursive";
+    c.fillStyle = "#101030"; c.textBaseline = "middle";
+    c.fillText(typedInput.value.trim(), 24, 120);
+  }
+  // Trim transparent margins
+  const c2 = src.getContext("2d");
+  const { width: W, height: H } = src;
+  const data = c2.getImageData(0, 0, W, H).data;
+  let minX = W, minY = H, maxX = 0, maxY = 0, found = false;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (data[(y * W + x) * 4 + 3] > 10) {
+      found = true;
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+  }
+  if (!found) return null;
+  const pad2 = 12;
+  minX = Math.max(0, minX - pad2); minY = Math.max(0, minY - pad2);
+  maxX = Math.min(W, maxX + pad2); maxY = Math.min(H, maxY + pad2);
+  const out = document.createElement("canvas");
+  out.width = maxX - minX; out.height = maxY - minY;
+  out.getContext("2d").drawImage(src, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+  return out.toDataURL("image/png").split(",")[1];
+}
+
+// ── Load request + render PDF ───────────────────────────────
+async function init() {
+  if (!REQ_ID) { show("stateError"); return; }
+  let r;
+  try { r = await rpc("get_signing_request", { p_request_id: REQ_ID }); }
+  catch (e) { show("stateError"); return; }
+
+  if (r.status === "not_found") { show("stateError"); return; }
+  if (r.status === "expired") { show("stateExpired"); return; }
+  if (r.status === "declined") { show("stateDeclined"); return; }
+  if (r.status === "signed" || r.status === "collected") {
+    document.getElementById("doneText").textContent =
+      "This document was signed" + (r.signed_name ? " by " + r.signed_name : "") +
+      (r.signed_at ? " on " + new Date(r.signed_at).toLocaleString() : "") +
+      ". The sender will provide the certified copy.";
+    show("stateDone"); return;
+  }
+
+  document.getElementById("reqTitle").textContent =
+    (r.sender_name || "Someone") + " has requested your signature";
+  document.getElementById("reqMeta").textContent =
+    r.document_name + (r.signer_email ? "  •  for " + r.signer_email : "");
+  if (r.message) {
+    const m = document.getElementById("reqMsg");
+    m.textContent = r.message; m.style.display = "";
+  }
+  if (r.signer_name) document.getElementById("nameInput").value = r.signer_name;
+  document.getElementById("fp").textContent = "SHA-256 " + (r.pdf_sha256 || "");
+
+  show("main"); sizePad();
+
+  // Render PDF
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+    const bytes = Uint8Array.from(atob(r.pdf_base64), c => c.charCodeAt(0));
+    const doc = await pdfjsLib.getDocument({ data: bytes }).promise;
+    const holder = document.getElementById("pages");
+    const cw = holder.clientWidth || 800;
+    document.getElementById("docLabel").textContent =
+      "Review the document (" + doc.numPages + (doc.numPages === 1 ? " page" : " pages") + "), then sign at the bottom.";
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const v1 = page.getViewport({ scale: 1 });
+      const scale = Math.min(2.2, (cw * 1.5) / v1.width);
+      const vp = page.getViewport({ scale });
+      const cv = document.createElement("canvas");
+      cv.width = vp.width; cv.height = vp.height;
+      holder.appendChild(cv);
+      await page.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise;
+    }
+  } catch (e) {
+    document.getElementById("docLabel").textContent =
+      "Document preview unavailable — you can still sign below. (" + e.message + ")";
+  }
+}
+
+// ── Submit ──────────────────────────────────────────────────
+document.getElementById("btnSign").onclick = async () => {
+  const b = document.getElementById("btnSign");
+  b.disabled = true; b.textContent = "Signing…";
+  const png = exportSignature();
+  if (!png) { b.disabled = false; b.textContent = "Sign Document"; return; }
+  try {
+    const res = await rpc("submit_signature", {
+      p_request_id: REQ_ID, p_action: "sign", p_signature_image: png,
+      p_signed_name: document.getElementById("nameInput").value.trim(),
+      p_consent: true, p_user_agent: navigator.userAgent,
+    });
+    if (res === "ok") { show("stateDone"); window.scrollTo(0, 0); }
+    else { alert("Could not sign: " + res); b.disabled = false; b.textContent = "Sign Document"; }
+  } catch (e) {
+    alert("Network problem — please try again."); b.disabled = false; b.textContent = "Sign Document";
+  }
+};
+
+document.getElementById("btnDecline").onclick = async () => {
+  if (!confirm("Decline to sign this document?")) return;
+  try {
+    await rpc("submit_signature", { p_request_id: REQ_ID, p_action: "decline",
+      p_signature_image: null, p_signed_name: document.getElementById("nameInput").value.trim(),
+      p_consent: false, p_user_agent: navigator.userAgent });
+    show("stateDeclined"); window.scrollTo(0, 0);
+  } catch (e) { alert("Network problem — please try again."); }
+};
+
+window.addEventListener("resize", () => { if (mode === "draw") sizePad(); });
+init();
+</script>
+</body>
+</html>
