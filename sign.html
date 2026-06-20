@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#800020">
 <title>Sign Document — SignSeal</title>
 <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
@@ -11,9 +12,11 @@
   :root { --maroon:#800020; --maroon-dark:#5c0017; --gold:#FFD700; --ink:#1a1a2e;
           --gray:#6b7280; --bg:#f3f4f8; --ok:#28a745; --danger:#c0392b; }
   * { box-sizing:border-box; margin:0; padding:0; }
+  html { -webkit-text-size-adjust:100%; }
   body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--ink); }
-  header { background:var(--maroon); color:#fff; padding:14px 20px; display:flex; align-items:center; gap:10px;
-           border-bottom:4px solid var(--gold); position:sticky; top:0; z-index:10; }
+  header { background:var(--maroon); color:#fff; padding:14px 18px; display:flex; align-items:center; gap:10px;
+           border-bottom:4px solid var(--gold); position:sticky; top:0; z-index:10;
+           padding-top:calc(14px + env(safe-area-inset-top)); }
   header .logo { font-size:20px; font-weight:700; letter-spacing:.3px; }
   header .sub { font-size:11px; opacity:.85; }
   .wrap { max-width:880px; margin:0 auto; padding:16px; }
@@ -26,47 +29,67 @@
   #pages canvas { width:100%; height:auto; border:1px solid #e2e4ee; border-radius:6px;
                   box-shadow:0 1px 3px rgba(0,0,0,.06); background:#fff; }
   .doc-label { font-size:12px; color:var(--gray); margin-bottom:8px; }
-  /* Sign panel */
   .tabs { display:flex; gap:6px; margin-bottom:10px; }
-  .tab { flex:1; padding:9px; text-align:center; border-radius:8px; border:1.5px solid #d8dae6;
-         font-size:13px; font-weight:600; cursor:pointer; background:#fff; color:var(--gray); }
+  .tab { flex:1; padding:11px; text-align:center; border-radius:8px; border:1.5px solid #d8dae6;
+         font-size:13px; font-weight:600; cursor:pointer; background:#fff; color:var(--gray); user-select:none; }
   .tab.active { border-color:var(--maroon); color:var(--maroon); background:#fdf2f5; }
   .padbox { position:relative; border:1.5px dashed #c3c6d4; border-radius:10px; background:#fff; }
-  #pad { width:100%; height:170px; touch-action:none; display:block; border-radius:10px; }
+  #pad { width:100%; height:180px; touch-action:none; display:block; border-radius:10px; }
   .pad-hint { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-              color:#c3c6d4; font-size:14px; pointer-events:none; }
+              color:#c3c6d4; font-size:14px; pointer-events:none; text-align:center; padding:0 12px; }
   .pad-line { position:absolute; left:8%; right:8%; bottom:38px; border-bottom:1.5px dashed #e4e6ef; pointer-events:none; }
-  .pad-actions { text-align:right; margin-top:6px; }
-  .linklike { background:none; border:none; color:var(--maroon); font-size:12px; cursor:pointer; text-decoration:underline; }
+  .pad-actions { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
+  .linklike { background:none; border:none; color:var(--maroon); font-size:13px; cursor:pointer; text-decoration:underline; padding:6px 2px; }
+  .saved-chip { display:none; align-items:center; gap:8px; background:#eef7ef; border:1px solid #cdeacd;
+                color:#1e7e34; border-radius:8px; padding:8px 10px; font-size:12.5px; margin-bottom:10px; }
+  .saved-chip button { margin-left:auto; background:var(--ok); color:#fff; border:none; border-radius:6px;
+                       padding:7px 12px; font-size:12.5px; font-weight:600; cursor:pointer; }
   #typeBox { display:none; }
-  #typedInput { width:100%; padding:12px; font-size:15px; border:1.5px solid #d8dae6; border-radius:8px; }
+  #typedInput { width:100%; padding:12px; font-size:16px; border:1.5px solid #d8dae6; border-radius:8px; }
   #typedPreview { font-family:'Dancing Script','Segoe Script',cursive; font-size:44px; text-align:center;
-                  padding:14px 6px 6px; min-height:74px; color:#111; }
+                  padding:14px 6px 6px; min-height:74px; color:#111; word-break:break-word; }
   .field { margin-top:12px; }
   .field label { font-size:12px; font-weight:600; color:var(--gray); display:block; margin-bottom:4px; }
-  .field input[type=text] { width:100%; padding:10px 12px; font-size:14px; border:1.5px solid #d8dae6; border-radius:8px; }
+  .field input[type=text] { width:100%; padding:11px 12px; font-size:16px; border:1.5px solid #d8dae6; border-radius:8px; }
+  .field input.bad { border-color:var(--danger); }
+  .err { color:var(--danger); font-size:12px; margin-top:6px; min-height:16px; }
   .consent { display:flex; gap:10px; align-items:flex-start; margin-top:14px; font-size:12.5px; color:#374151;
-             background:#f8f9fc; padding:10px 12px; border-radius:8px; }
-  .consent input { margin-top:2px; width:17px; height:17px; accent-color:var(--maroon); }
+             background:#f8f9fc; padding:11px 12px; border-radius:8px; cursor:pointer; }
+  .consent input { margin-top:2px; width:18px; height:18px; flex:0 0 18px; accent-color:var(--maroon); }
   .btnrow { display:flex; gap:10px; margin-top:16px; }
-  .btn { flex:1; padding:14px; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; }
+  .btn { flex:1; padding:15px; border:none; border-radius:10px; font-size:16px; font-weight:700; cursor:pointer; }
   .btn-sign { background:var(--maroon); color:#fff; }
   .btn-sign:disabled { background:#caa6b1; cursor:not-allowed; }
   .btn-sign:not(:disabled):hover { background:var(--maroon-dark); }
-  .btn-decline { flex:0 0 110px; background:#fff; color:var(--gray); border:1.5px solid #d8dae6; }
-  .statebox { text-align:center; padding:56px 24px; }
+  .btn-decline { flex:0 0 120px; background:#fff; color:var(--gray); border:1.5px solid #d8dae6; }
+  .statebox { text-align:center; padding:52px 24px; }
   .statebox .big { font-size:54px; }
   .statebox h2 { margin:12px 0 6px; }
   .statebox p { color:var(--gray); font-size:14px; max-width:430px; margin:0 auto; line-height:1.5; }
   .seal { width:86px; height:86px; border-radius:50%; background:var(--ok); margin:0 auto 6px;
           display:flex; align-items:center; justify-content:center; }
   .seal svg { width:46px; height:46px; }
-  footer { text-align:center; color:#9aa0b0; font-size:11px; padding:18px 12px 30px; line-height:1.6; }
+  .pin-input { width:200px; max-width:100%; text-align:center; letter-spacing:6px; font-size:24px; font-weight:700;
+               padding:12px; border:2px solid #d8dae6; border-radius:10px; margin:6px auto 4px; display:block; }
+  .pin-btn { background:var(--maroon); color:#fff; border:none; border-radius:10px; padding:13px 30px;
+             font-size:15px; font-weight:700; cursor:pointer; margin-top:10px; }
+  footer { text-align:center; color:#9aa0b0; font-size:11px; padding:18px 12px 30px; line-height:1.6;
+           padding-bottom:calc(30px + env(safe-area-inset-bottom)); }
   footer a { color:var(--maroon); }
   .spinner { width:34px; height:34px; border:4px solid #e7e9f2; border-top-color:var(--maroon);
              border-radius:50%; margin:0 auto 14px; animation:sp 0.9s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
   .fingerprint { font-family:Consolas,monospace; font-size:10.5px; color:#9aa0b0; word-break:break-all; }
+
+  @media (max-width:600px) {
+    .wrap { padding:10px; }
+    .card { padding:14px; border-radius:10px; }
+    #pad { height:200px; }
+    .tab { padding:12px; font-size:14px; }
+    .request-title { font-size:16px; }
+    /* Keep the action buttons reachable while scrolling the sign card */
+    .btnrow { position:sticky; bottom:8px; z-index:6; }
+  }
 </style>
 </head>
 <body>
@@ -81,6 +104,15 @@
   <div id="stateLoading" class="card statebox">
     <div class="spinner"></div>
     <p>Loading your document…</p>
+  </div>
+
+  <div id="stateLocked" class="card statebox" style="display:none">
+    <div class="big">🔒</div><h2>Protected document</h2>
+    <p id="lockedText" style="margin-bottom:6px"></p>
+    <input class="pin-input" id="pinInput" type="text" inputmode="numeric" autocomplete="one-time-code"
+           placeholder="••••" aria-label="Access code">
+    <div class="err" id="pinErr" style="text-align:center"></div>
+    <button class="pin-btn" id="pinBtn">Unlock document</button>
   </div>
 
   <div id="stateError" class="card statebox" style="display:none">
@@ -118,18 +150,27 @@
 
     <div class="card" id="signCard">
       <div class="request-title" style="margin-bottom:10px">✍ Your signature</div>
+
+      <div class="saved-chip" id="savedChip">
+        <span>You have a saved signature on this device.</span>
+        <button id="useSaved" type="button">Use it</button>
+      </div>
+
       <div class="tabs">
-        <div class="tab active" id="tabDraw">Draw</div>
-        <div class="tab" id="tabType">Type</div>
+        <div class="tab active" id="tabDraw" role="button" tabindex="0">Draw</div>
+        <div class="tab" id="tabType" role="button" tabindex="0">Type</div>
       </div>
 
       <div id="drawBox">
         <div class="padbox">
-          <canvas id="pad"></canvas>
+          <canvas id="pad" aria-label="Signature pad"></canvas>
           <div class="pad-line"></div>
           <div class="pad-hint" id="padHint">Sign here with your finger or mouse</div>
         </div>
-        <div class="pad-actions"><button class="linklike" id="clearPad">Clear</button></div>
+        <div class="pad-actions">
+          <span style="font-size:12px;color:#9aa0b0">Draw your signature above</span>
+          <button class="linklike" id="clearPad" type="button">Clear</button>
+        </div>
       </div>
 
       <div id="typeBox">
@@ -138,20 +179,22 @@
       </div>
 
       <div class="field">
-        <label for="nameInput">Confirm your full name</label>
+        <label for="nameInput">Confirm your full name <span style="color:var(--danger)">*</span></label>
         <input type="text" id="nameInput" placeholder="e.g. Jan van der Merwe" autocomplete="name">
       </div>
 
-      <label class="consent">
+      <label class="consent" for="consent">
         <input type="checkbox" id="consent">
         <span>I agree to sign this document electronically and that my electronic signature is the
         legal equivalent of my handwritten signature, as contemplated in Section 13 of the
         South African Electronic Communications and Transactions Act, 2002.</span>
       </label>
 
+      <div class="err" id="formErr"></div>
+
       <div class="btnrow">
-        <button class="btn btn-decline" id="btnDecline">Decline</button>
-        <button class="btn btn-sign" id="btnSign" disabled>Sign Document</button>
+        <button class="btn btn-decline" id="btnDecline" type="button">Decline</button>
+        <button class="btn btn-sign" id="btnSign" type="button" disabled>Sign Document</button>
       </div>
     </div>
   </div>
@@ -168,6 +211,7 @@ const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
 const qs = new URLSearchParams(location.search);
 const REQ_ID = qs.get("id") || "";
+let ACCESS_CODE = "";   // filled when the signer unlocks a protected document
 
 async function rpc(fn, args) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
@@ -180,8 +224,21 @@ async function rpc(fn, args) {
   return r.json();
 }
 
+// submit_signature with graceful fallback when the backend predates the
+// IP/timezone params (so a freshly-deployed portal works either way).
+async function submitSign(args) {
+  try { return await rpc("submit_signature", args); }
+  catch (e) {
+    if ("p_ip" in args || "p_timezone" in args) {
+      const a = Object.assign({}, args); delete a.p_ip; delete a.p_timezone;
+      return await rpc("submit_signature", a);
+    }
+    throw e;
+  }
+}
+
 function show(id) {
-  for (const s of ["stateLoading","stateError","stateExpired","stateDone","stateDeclined","main"])
+  for (const s of ["stateLoading","stateLocked","stateError","stateExpired","stateDone","stateDeclined","main"])
     document.getElementById(s).style.display = (s === id) ? "" : "none";
 }
 
@@ -213,6 +270,7 @@ pad.addEventListener("pointermove", e => {
   updateSignEnabled();
 });
 pad.addEventListener("pointerup", () => { drawing = false; });
+pad.addEventListener("pointercancel", () => { drawing = false; });
 document.getElementById("clearPad").onclick = () => {
   ctx.clearRect(0, 0, pad.width, pad.height); hasInk = false;
   document.getElementById("padHint").style.display = "";
@@ -222,14 +280,18 @@ document.getElementById("clearPad").onclick = () => {
 // ── Tabs ────────────────────────────────────────────────────
 let mode = "draw";
 const tabDraw = document.getElementById("tabDraw"), tabType = document.getElementById("tabType");
-tabDraw.onclick = () => { mode = "draw";
-  tabDraw.classList.add("active"); tabType.classList.remove("active");
-  document.getElementById("drawBox").style.display = ""; document.getElementById("typeBox").style.display = "none";
-  updateSignEnabled(); };
-tabType.onclick = () => { mode = "type";
-  tabType.classList.add("active"); tabDraw.classList.remove("active");
-  document.getElementById("drawBox").style.display = "none"; document.getElementById("typeBox").style.display = "";
-  updateSignEnabled(); };
+function setMode(m) {
+  mode = m;
+  tabDraw.classList.toggle("active", m === "draw");
+  tabType.classList.toggle("active", m === "type");
+  document.getElementById("drawBox").style.display = m === "draw" ? "" : "none";
+  document.getElementById("typeBox").style.display = m === "type" ? "" : "none";
+  updateSignEnabled();
+}
+tabDraw.onclick = () => setMode("draw");
+tabType.onclick = () => setMode("type");
+tabDraw.onkeydown = e => { if (e.key === "Enter" || e.key === " ") setMode("draw"); };
+tabType.onkeydown = e => { if (e.key === "Enter" || e.key === " ") setMode("type"); };
 
 const typedInput = document.getElementById("typedInput");
 typedInput.addEventListener("input", () => {
@@ -246,6 +308,16 @@ function updateSignEnabled() {
   const ok = sigReady() && document.getElementById("nameInput").value.trim().length > 1
              && document.getElementById("consent").checked;
   document.getElementById("btnSign").disabled = !ok;
+  if (ok) document.getElementById("formErr").textContent = "";
+}
+
+// Inline guidance when the signer taps a disabled Sign button area
+document.getElementById("formErr");
+function whatsMissing() {
+  if (!sigReady()) return mode === "draw" ? "Please draw your signature." : "Please type your name to sign.";
+  if (document.getElementById("nameInput").value.trim().length <= 1) return "Please confirm your full name.";
+  if (!document.getElementById("consent").checked) return "Please tick the consent box to sign electronically.";
+  return "";
 }
 
 // ── Export signature as trimmed transparent PNG ─────────────
@@ -260,7 +332,6 @@ function exportSignature() {
     c.fillStyle = "#101030"; c.textBaseline = "middle";
     c.fillText(typedInput.value.trim(), 24, 120);
   }
-  // Trim transparent margins
   const c2 = src.getContext("2d");
   const { width: W, height: H } = src;
   const data = c2.getImageData(0, 0, W, H).data;
@@ -282,24 +353,49 @@ function exportSignature() {
   return out.toDataURL("image/png").split(",")[1];
 }
 
-// ── Load request + render PDF ───────────────────────────────
-async function init() {
-  if (!REQ_ID) { show("stateError"); return; }
-  let r;
-  try { r = await rpc("get_signing_request", { p_request_id: REQ_ID }); }
-  catch (e) { show("stateError"); return; }
+// ── Adopt-your-signature (saved on this device) ─────────────
+const SIG_STORE = "signseal_sig_v1";
+function savedSig() { try { return JSON.parse(localStorage.getItem(SIG_STORE) || "null"); } catch (e) { return null; } }
+function rememberSig(b64png, name) {
+  try { localStorage.setItem(SIG_STORE, JSON.stringify({ png: b64png, name: name, at: Date.now() })); } catch (e) {}
+}
+function offerSavedSig() {
+  const s = savedSig();
+  if (!s || !s.png) return;
+  document.getElementById("savedChip").style.display = "flex";
+  document.getElementById("useSaved").onclick = () => {
+    setMode("draw");
+    const img = new Image();
+    img.onload = () => {
+      const w = pad.clientWidth, h = pad.clientHeight;
+      const r = Math.min(w / img.width, h / img.height, 1);
+      ctx.clearRect(0, 0, pad.width, pad.height);
+      ctx.drawImage(img, 8, (h - img.height * r) / 2, img.width * r, img.height * r);
+      hasInk = true; document.getElementById("padHint").style.display = "none";
+      if (s.name && !document.getElementById("nameInput").value)
+        document.getElementById("nameInput").value = s.name;
+      updateSignEnabled();
+    };
+    img.src = "data:image/png;base64," + s.png;
+  };
+}
 
-  if (r.status === "not_found") { show("stateError"); return; }
-  if (r.status === "expired") { show("stateExpired"); return; }
-  if (r.status === "declined") { show("stateDeclined"); return; }
-  if (r.status === "signed" || r.status === "collected") {
-    document.getElementById("doneText").textContent =
-      "This document was signed" + (r.signed_name ? " by " + r.signed_name : "") +
-      (r.signed_at ? " on " + new Date(r.signed_at).toLocaleString() : "") +
-      ". The sender will provide the certified copy.";
-    show("stateDone"); return;
-  }
+// ── Capture IP + timezone (best effort, never blocks signing) ─
+async function signerContext() {
+  let tz = "";
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) {}
+  let ip = "";
+  try {
+    const c = new AbortController(); const t = setTimeout(() => c.abort(), 2500);
+    const r = await fetch("https://api.ipify.org?format=json", { signal: c.signal });
+    clearTimeout(t);
+    if (r.ok) ip = (await r.json()).ip || "";
+  } catch (e) {}
+  return { ip, tz };
+}
 
+// ── Render a (pending) request: details + PDF + signing UI ──
+async function renderRequest(r) {
   document.getElementById("reqTitle").textContent =
     (r.sender_name || "Someone") + " has requested your signature";
   document.getElementById("reqMeta").textContent =
@@ -311,9 +407,8 @@ async function init() {
   if (r.signer_name) document.getElementById("nameInput").value = r.signer_name;
   document.getElementById("fp").textContent = "SHA-256 " + (r.pdf_sha256 || "");
 
-  show("main"); sizePad();
+  show("main"); sizePad(); offerSavedSig();
 
-  // Render PDF
   try {
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
@@ -322,11 +417,11 @@ async function init() {
     const holder = document.getElementById("pages");
     const cw = holder.clientWidth || 800;
     document.getElementById("docLabel").textContent =
-      "Review the document (" + doc.numPages + (doc.numPages === 1 ? " page" : " pages") + "), then sign at the bottom.";
+      "Review the document (" + doc.numPages + (doc.numPages === 1 ? " page" : " pages") + "), then sign below.";
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
       const v1 = page.getViewport({ scale: 1 });
-      const scale = Math.min(2.2, (cw * 1.5) / v1.width);
+      const scale = Math.min(2.4, (cw * 2) / v1.width);
       const vp = page.getViewport({ scale });
       const cv = document.createElement("canvas");
       cv.width = vp.width; cv.height = vp.height;
@@ -339,22 +434,77 @@ async function init() {
   }
 }
 
+// ── Access-code (locked) screen ─────────────────────────────
+function showLocked(r) {
+  document.getElementById("lockedText").textContent =
+    (r.sender_name || "The sender") + " protected “" + (r.document_name || "this document") +
+    "” with an access code. Enter the code you were given to open it.";
+  show("stateLocked");
+  document.getElementById("pinInput").focus();
+}
+document.getElementById("pinBtn").onclick = unlock;
+document.getElementById("pinInput").addEventListener("keydown", e => { if (e.key === "Enter") unlock(); });
+async function unlock() {
+  const code = document.getElementById("pinInput").value.trim();
+  const err = document.getElementById("pinErr");
+  if (!code) { err.textContent = "Enter the access code."; return; }
+  const btn = document.getElementById("pinBtn"); btn.disabled = true; btn.textContent = "Checking…";
+  let r;
+  try { r = await rpc("get_signing_request", { p_request_id: REQ_ID, p_code: code }); }
+  catch (e) { err.textContent = "Network problem — try again."; btn.disabled = false; btn.textContent = "Unlock document"; return; }
+  btn.disabled = false; btn.textContent = "Unlock document";
+  if (r.status === "locked") { err.textContent = "Incorrect code. Please try again."; return; }
+  ACCESS_CODE = code;
+  routeStatus(r);
+}
+
+// ── Status router ───────────────────────────────────────────
+function routeStatus(r) {
+  if (!r || r.status === "not_found") { show("stateError"); return; }
+  if (r.status === "expired") { show("stateExpired"); return; }
+  if (r.status === "locked") { showLocked(r); return; }
+  if (r.status === "declined") { show("stateDeclined"); return; }
+  if (r.status === "signed" || r.status === "collected") {
+    document.getElementById("doneText").textContent =
+      "This document was signed" + (r.signed_name ? " by " + r.signed_name : "") +
+      (r.signed_at ? " on " + new Date(r.signed_at).toLocaleString() : "") +
+      ". The sender will provide the certified copy.";
+    show("stateDone"); return;
+  }
+  renderRequest(r);   // pending
+}
+
+async function init() {
+  if (!REQ_ID) { show("stateError"); return; }
+  let r;
+  try { r = await rpc("get_signing_request", { p_request_id: REQ_ID }); }
+  catch (e) { show("stateError"); return; }
+  routeStatus(r);
+}
+
 // ── Submit ──────────────────────────────────────────────────
 document.getElementById("btnSign").onclick = async () => {
   const b = document.getElementById("btnSign");
+  const miss = whatsMissing();
+  if (miss) { document.getElementById("formErr").textContent = miss; return; }
   b.disabled = true; b.textContent = "Signing…";
   const png = exportSignature();
-  if (!png) { b.disabled = false; b.textContent = "Sign Document"; return; }
+  if (!png) { b.disabled = false; b.textContent = "Sign Document";
+    document.getElementById("formErr").textContent = "Your signature looks empty — please sign again."; return; }
+  const name = document.getElementById("nameInput").value.trim();
+  const cxt = await signerContext();
   try {
-    const res = await rpc("submit_signature", {
+    const res = await submitSign({
       p_request_id: REQ_ID, p_action: "sign", p_signature_image: png,
-      p_signed_name: document.getElementById("nameInput").value.trim(),
-      p_consent: true, p_user_agent: navigator.userAgent,
+      p_signed_name: name, p_consent: true, p_user_agent: navigator.userAgent,
+      p_ip: cxt.ip, p_timezone: cxt.tz,
     });
-    if (res === "ok") { show("stateDone"); window.scrollTo(0, 0); }
-    else { alert("Could not sign: " + res); b.disabled = false; b.textContent = "Sign Document"; }
+    if (res === "ok") { rememberSig(png, name); show("stateDone"); window.scrollTo(0, 0); }
+    else { document.getElementById("formErr").textContent = "Could not sign: " + res;
+           b.disabled = false; b.textContent = "Sign Document"; }
   } catch (e) {
-    alert("Network problem — please try again."); b.disabled = false; b.textContent = "Sign Document";
+    document.getElementById("formErr").textContent = "Network problem — please try again.";
+    b.disabled = false; b.textContent = "Sign Document";
   }
 };
 
@@ -368,7 +518,7 @@ document.getElementById("btnDecline").onclick = async () => {
   } catch (e) { alert("Network problem — please try again."); }
 };
 
-window.addEventListener("resize", () => { if (mode === "draw") sizePad(); });
+window.addEventListener("resize", () => { if (mode === "draw" && document.getElementById("main").style.display !== "none") sizePad(); });
 init();
 </script>
 </body>

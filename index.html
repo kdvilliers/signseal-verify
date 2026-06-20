@@ -16,6 +16,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 .top h1{font-size:32px;font-weight:700;letter-spacing:-.5px}
 .top p{color:#fcc;font-size:14px;margin:6px 0 24px}
 .container{max-width:740px;margin:0 auto;padding:24px 16px 60px}
+
+/* Search bar */
 .search{background:#fff;border-radius:14px;padding:28px 32px;
         box-shadow:0 8px 32px rgba(0,0,0,.07);margin-top:-28px;position:relative;z-index:2}
 .search label{font-weight:600;font-size:14px;display:block;margin-bottom:8px}
@@ -28,11 +30,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
                     transition:background .2s;white-space:nowrap}
 .search-row button:hover{background:#5c0017}
 .search-or{text-align:center;color:#888;font-size:12px;margin:14px 0 10px}
+
+/* Upload area */
 .upload-area{border:2px dashed #ccc;border-radius:10px;padding:20px;text-align:center;
              cursor:pointer;transition:border .2s,background .2s}
 .upload-area:hover,.upload-area.drag{border-color:#800020;background:#fdf6f8}
 .upload-area p{color:#666;font-size:13px}
 .upload-area input{display:none}
+
+/* Result card */
 .result{margin-top:24px;display:none}
 .result.show{display:block}
 .card{background:#fff;border-radius:14px;overflow:hidden;
@@ -53,12 +59,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 .row-value{flex:1;font-size:14px;font-weight:500;word-break:break-all}
 .row-value.bold{font-weight:700}
 .row-value.mono{font-family:"SF Mono",Consolas,monospace;font-size:11px}
+
+/* Hash check section */
 .hash-check{background:#f8f9fb;border-top:1px solid #eee;padding:20px 28px}
 .hash-check h3{font-size:13px;font-weight:700;color:#800020;margin-bottom:10px}
 .hash-result{padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-top:10px;display:none}
 .hash-result.match{background:#d4edda;color:#155724;display:block}
 .hash-result.fail{background:#f8d7da;color:#721c24;display:block}
 .hash-result.pending{background:#fff3cd;color:#856404;display:block}
+
 .footer{text-align:center;color:#888;font-size:11px;margin-top:36px;line-height:1.7}
 .footer strong{color:#800020}
 .not-found{text-align:center;padding:30px;color:#6c757d}
@@ -67,6 +76,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
          border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;
          vertical-align:middle;margin-right:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
+
 @media(max-width:600px){
   .row{flex-direction:column}
   .row-label{margin-bottom:3px}
@@ -77,10 +87,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 </style>
 </head>
 <body>
+
 <div class="top">
   <h1>SignSeal</h1>
   <p>Online Document Verification</p>
 </div>
+
 <div class="container">
   <div class="search">
     <label>Look up an Audit ID</label>
@@ -94,15 +106,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
       <input type="file" id="pdfFile" accept=".pdf"/>
     </div>
   </div>
+
   <div class="result" id="resultBox"></div>
+
   <div class="footer">
     <strong>SignSeal</strong> &mdash; Free document verification<br/>
-    Recognised under the South African ECT Act, 2002
+    Electronic signature per Section 13 of the SA ECT Act, 2002
   </div>
 </div>
+
 <script>
 const SB_URL = "https://ndierlngpweqzizezuoa.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kaWVybG5ncHdlcXppemV6dW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MzA5NzEsImV4cCI6MjA5NjMwNjk3MX0.gnJymVYAcrvxmKRAR_lsKOhNGep32AxnQzBPQWP4oYM";
+
+// ── Supabase fetch helper ─────────────────────────────────────
 async function sbFetch(params) {
   const qs = new URLSearchParams(params).toString();
   const resp = await fetch(SB_URL + "/rest/v1/audit_records?" + qs, {
@@ -111,6 +128,8 @@ async function sbFetch(params) {
   if (!resp.ok) throw new Error("API error " + resp.status);
   return resp.json();
 }
+
+// ── Lookup by audit ID ─────────────────────────────────────────
 async function lookupById() {
   const id = document.getElementById("auditInput").value.trim();
   if (!id) return;
@@ -121,6 +140,8 @@ async function lookupById() {
     showRecord(rows[0]);
   } catch (e) { showError(e.message); }
 }
+
+// ── Lookup by PDF hash ─────────────────────────────────────────
 async function lookupByHash(hash) {
   showLoading("Searching for hash...");
   try {
@@ -129,36 +150,58 @@ async function lookupByHash(hash) {
     showRecord(rows[0], hash);
   } catch (e) { showError(e.message); }
 }
+
+// ── Render result card ─────────────────────────────────────────
 function showRecord(rec, uploadedHash) {
   const raw = rec.raw_record || {};
   const sig = raw.signature || {};
   const doc = raw.document || {};
   const rBox = document.getElementById("resultBox");
+
   let rows = `
     <div class="row"><div class="row-label">Audit ID</div>
-      <div class="row-value bold mono">${esc(rec.audit_id)}</div></div>
-    <div class="row"><div class="row-label">Signed by</div>
+      <div class="row-value bold mono">${esc(rec.audit_id)}</div></div>`;
+
+  const signers = Array.isArray(raw.signers) ? raw.signers : null;
+  if (signers && signers.length) {
+    // Multi-signer Certificate of Completion
+    signers.forEach((s, i) => {
+      const who = esc(s.name || "") + (s.email ? " &lt;" + esc(s.email) + "&gt;" : "");
+      rows += `<div class="row"><div class="row-label">Signer ${i + 1} of ${signers.length}</div>
+        <div class="row-value bold">${who}</div></div>`;
+      const when = esc(s.timestamp_display || "") + (s.location ? "  &bull;  " + esc(s.location) : "");
+      if (when.trim()) rows += `<div class="row"><div class="row-label">Signed</div>
+        <div class="row-value">${when}</div></div>`;
+    });
+  } else {
+    rows += `<div class="row"><div class="row-label">Signed by</div>
       <div class="row-value bold">${esc(rec.signer_name)}</div></div>`;
-  if (rec.signer_email) rows += `
-    <div class="row"><div class="row-label">Email</div>
+    if (rec.signer_email) rows += `<div class="row"><div class="row-label">Email</div>
       <div class="row-value">${esc(rec.signer_email)}</div></div>`;
-  if (rec.signer_org) rows += `
-    <div class="row"><div class="row-label">Organization</div>
+    if (rec.signer_org) rows += `<div class="row"><div class="row-label">Organization</div>
       <div class="row-value">${esc(rec.signer_org)}</div></div>`;
-  rows += `
-    <div class="row"><div class="row-label">Date &amp; Time</div>
+    rows += `<div class="row"><div class="row-label">Date &amp; Time</div>
       <div class="row-value bold">${esc(sig.timestamp_display || rec.signed_at || "")}</div></div>`;
-  if (rec.reason) rows += `
-    <div class="row"><div class="row-label">Reason</div>
+    if (rec.reason) rows += `<div class="row"><div class="row-label">Reason</div>
       <div class="row-value">${esc(rec.reason)}</div></div>`;
-  if (rec.location) rows += `
-    <div class="row"><div class="row-label">Location</div>
+    if (rec.location) rows += `<div class="row"><div class="row-label">Location</div>
       <div class="row-value">${esc(rec.location)}</div></div>`;
+  }
+
+  // Optional audit trail
+  if (Array.isArray(raw.events) && raw.events.length) {
+    raw.events.forEach(ev => {
+      rows += `<div class="row"><div class="row-label">${esc(ev.when || "")}</div>
+        <div class="row-value">${esc(ev.text || "")}</div></div>`;
+    });
+  }
+
   rows += `
     <div class="row"><div class="row-label">Document</div>
       <div class="row-value">${esc(rec.document_name)}</div></div>
     <div class="row"><div class="row-label">SHA-256</div>
       <div class="row-value mono">${esc(rec.document_hash)}</div></div>`;
+
   let hashSection = "";
   if (uploadedHash) {
     const match = uploadedHash === rec.document_hash;
@@ -178,6 +221,7 @@ function showRecord(rec, uploadedHash) {
       <div class="hash-result" id="hashResult"></div>
     </div>`;
   }
+
   rBox.innerHTML = `<div class="card">
     <div class="card-header ok">
       <div class="seal-sm">&#10003;</div>
@@ -188,6 +232,8 @@ function showRecord(rec, uploadedHash) {
     ${hashSection}
   </div>`;
   rBox.className = "result show";
+
+  // Wire up the per-record hash check file input
   const hf = document.getElementById("hashFile");
   if (hf) {
     hf.addEventListener("change", async e => {
@@ -206,6 +252,7 @@ function showRecord(rec, uploadedHash) {
     });
   }
 }
+
 function showNotFound(id) {
   const rBox = document.getElementById("resultBox");
   rBox.innerHTML = `<div class="card"><div class="card-header fail">
@@ -245,6 +292,8 @@ function showError(msg) {
   rBox.className = "result show";
 }
 function esc(s) { const d=document.createElement("div"); d.textContent=s||""; return d.innerHTML; }
+
+// ── File inputs ────────────────────────────────────────────────
 document.getElementById("pdfFile").addEventListener("change", async e => {
   const file = e.target.files[0]; if (!file) return;
   showLoading("Hashing " + file.name + "...");
@@ -253,6 +302,8 @@ document.getElementById("pdfFile").addEventListener("change", async e => {
   const hash = Array.from(new Uint8Array(hb)).map(b=>b.toString(16).padStart(2,"0")).join("");
   await lookupByHash(hash);
 });
+
+// Drag & drop
 const dz = document.getElementById("dropZone");
 dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag"); });
 dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
@@ -262,9 +313,13 @@ dz.addEventListener("drop", e => {
   if (file) { document.getElementById("pdfFile").files = e.dataTransfer.files;
               document.getElementById("pdfFile").dispatchEvent(new Event("change")); }
 });
+
+// Enter key triggers search
 document.getElementById("auditInput").addEventListener("keydown", e => {
   if (e.key === "Enter") lookupById();
 });
+
+// Auto-lookup from URL ?id=...
 (function() {
   const p = new URLSearchParams(location.search);
   const id = p.get("id");
