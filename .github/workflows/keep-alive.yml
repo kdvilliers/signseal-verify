@@ -11,9 +11,17 @@ jobs:
     steps:
       - name: Ping Supabase REST API
         run: |
+          # || STATUS="000" catches curl exit codes (e.g. DNS failure when project is paused)
+          # so bash -e doesn't kill the script before we can print a useful message.
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --connect-timeout 15 --max-time 30 \
             "https://ndierlngpweqzizezuoa.supabase.co/rest/v1/remote_signing_requests?select=id&limit=1" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
-          echo "Supabase status: $STATUS"
-          [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 500 ] && echo "Project alive." || (echo "Unexpected status $STATUS" && exit 1)
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}") || STATUS="000"
+          echo "Supabase HTTP status: $STATUS"
+          if [ "$STATUS" -ge 200 ] 2>/dev/null && [ "$STATUS" -lt 500 ] 2>/dev/null; then
+            echo "Project is alive and responding."
+          else
+            echo "ERROR: Project unreachable (status=$STATUS). It may be paused — restore it at https://supabase.com/dashboard/project/ndierlngpweqzizezuoa"
+            exit 1
+          fi
