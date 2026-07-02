@@ -13,9 +13,11 @@ jobs:
         run: |
           # || STATUS="000" catches curl exit codes (e.g. DNS failure when project is paused)
           # so bash -e doesn't kill the script before we can print a useful message.
+          # Hits the REST API root rather than a specific table, so this keeps working
+          # even if the app's schema changes later — we only care that the project responds.
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             --connect-timeout 15 --max-time 30 \
-            "https://ndierlngpweqzizezuoa.supabase.co/rest/v1/remote_signing_requests?select=id&limit=1" \
+            "https://ndierlngpweqzizezuoa.supabase.co/rest/v1/" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}") || STATUS="000"
           echo "Supabase HTTP status: $STATUS"
