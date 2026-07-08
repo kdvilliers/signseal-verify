@@ -2,7 +2,10 @@ name: Supabase keep-alive
 
 on:
   schedule:
-    - cron: "0 6 */3 * *"
+    # Daily. Every-3-days proved too sparse for Supabase's "sufficient
+    # activity" scanner (warning email arrived 8 Jul despite green runs
+    # on 4 & 7 Jul). One 10s run/day is negligible Actions usage.
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 jobs:
