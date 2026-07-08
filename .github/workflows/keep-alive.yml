@@ -24,15 +24,21 @@ jobs:
             echo "ERROR: could not extract ANON_KEY from sign.html — update this workflow's grep."
             exit 1
           fi
-          # A real RPC lookup (dummy id) = an actual database query, which is
-          # unambiguous activity to Supabase's inactivity/pause detector.
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --connect-timeout 15 --max-time 30 \
-            -X POST "https://ndierlngpweqzizezuoa.supabase.co/rest/v1/rpc/get_signing_request" \
-            -H "apikey: $KEY" \
-            -H "Authorization: Bearer $KEY" \
-            -H "Content-Type: application/json" \
-            -d '{"p_request_id":"keepalive-ping"}') || STATUS="000"
+          # Real RPC lookups (dummy id) = actual database queries. Supabase's
+          # pause docs say "a few user requests to the database each day" keeps
+          # a project active, so fire three per daily run, briefly spaced.
+          STATUS="000"
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 15 --max-time 30 \
+              -X POST "https://ndierlngpweqzizezuoa.supabase.co/rest/v1/rpc/get_signing_request" \
+              -H "apikey: $KEY" \
+              -H "Authorization: Bearer $KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"p_request_id\":\"keepalive-ping-$i\"}") || STATUS="000"
+            echo "ping $i: HTTP $STATUS"
+            sleep 5
+          done
           echo "Supabase HTTP status: $STATUS"
           case "$STATUS" in
             2*) echo "Database query serviced — project is active." ;;
